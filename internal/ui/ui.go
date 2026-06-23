@@ -19,7 +19,7 @@ func Run(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("ui: open fleet store: %w", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	program := tea.NewProgram(newModel(cfg, store), tea.WithAltScreen())
 	if _, err := program.Run(); err != nil {

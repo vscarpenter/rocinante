@@ -73,7 +73,7 @@ func NewStore(dir string) (*Store, error) {
 		return nil, err
 	}
 	if err := watcher.Add(dir); err != nil {
-		watcher.Close()
+		_ = watcher.Close()
 		return nil, err
 	}
 

@@ -144,14 +144,14 @@ func Write(dir string, s Status) error {
 	}
 	tmpName := tmp.Name()
 	// Best effort cleanup if anything below fails before the rename.
-	defer os.Remove(tmpName)
+	defer func() { _ = os.Remove(tmpName) }()
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("fleet: write temp file: %w", err)
 	}
 	if err := tmp.Sync(); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("fleet: sync temp file: %w", err)
 	}
 	if err := tmp.Close(); err != nil {

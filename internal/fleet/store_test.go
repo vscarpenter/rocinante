@@ -82,7 +82,7 @@ func TestStoreEmitsSnapshotOnFileChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewStore: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	if got := len(store.Snapshot().Agents); got != 0 {
 		t.Fatalf("expected empty initial snapshot, got %d agents", got)

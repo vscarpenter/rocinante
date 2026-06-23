@@ -19,7 +19,7 @@ func TestEndToEndStoreToModel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewStore: %v", err)
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 
 	cfg := config.Default()
 	cfg.Fleet.Dir = dir

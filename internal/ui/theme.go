@@ -43,7 +43,9 @@ var (
 
 	styleFooter = lipgloss.NewStyle().Foreground(colorMuted)
 
-	styleSelected = lipgloss.NewStyle().Bold(true).Foreground(colorBlue)
+	// styleSelected is the focused selection: near-white surface text on the
+	// accent, which reads in both light and dark terminals.
+	styleSelected = lipgloss.NewStyle().Bold(true).Background(accent).Foreground(surface)
 
 	styleMuted = lipgloss.NewStyle().Foreground(colorMuted)
 
