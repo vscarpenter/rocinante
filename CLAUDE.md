@@ -62,6 +62,9 @@ Also done: the v1.0 plumbing, CI, a goreleaser config, and `llms.txt`. Remaining
 v1.0 work is the light and dark themes against the real Signal Ledger ramp, and
 the Homebrew tap, which needs the tap repo and a token before it is enabled.
 
+Also done: the v0.3 blocked-agent alert in the header, which turns the health
+note amber and leads with any blocked agent.
+
 Deferred to a later session, with a clean seam left in place: the remote Roci
 adapter over Tailscale (v0.3).
 

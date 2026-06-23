@@ -134,6 +134,34 @@ func TestUpdateArrowsMoveAndClampCursor(t *testing.T) {
 	}
 }
 
+func TestStatusSummaryNominalWhenHealthy(t *testing.T) {
+	m := sizedModel(t0, freshAgent("a", "A", t0))
+	if got := m.statusSummary(); got != "all systems nominal" {
+		t.Errorf("a healthy fleet should read nominal, got %q", got)
+	}
+}
+
+func TestStatusSummaryFlagsBlockedAgent(t *testing.T) {
+	blocked := freshAgent("a", "A", t0)
+	blocked.State = fleet.StateBlocked
+	m := sizedModel(t0, blocked, freshAgent("b", "B", t0))
+	if got := m.statusSummary(); !strings.Contains(got, "1 blocked") {
+		t.Errorf("the header should flag a blocked agent, got %q", got)
+	}
+}
+
+func TestStatusSummaryCombinesProblems(t *testing.T) {
+	blocked := freshAgent("a", "A", t0)
+	blocked.State = fleet.StateBlocked
+	offline := freshAgent("b", "B", t0)
+	offline.Heartbeat = t0.Add(-10 * time.Minute) // 600s silence: past 300s offline
+	m := sizedModel(t0, blocked, offline)
+	got := m.statusSummary()
+	if !strings.Contains(got, "1 blocked") || !strings.Contains(got, "1 offline") {
+		t.Errorf("the header should surface both problems, got %q", got)
+	}
+}
+
 func TestApplySnapshotSeedsAndUpdatesLog(t *testing.T) {
 	m := sizedModel(t0, freshAgent("a", "A", t0))
 	if len(m.logs) != 1 {

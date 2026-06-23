@@ -73,7 +73,15 @@ func (m model) renderTooSmall() string {
 
 func (m model) renderHeader() string {
 	title := styleHeader.Render("ROCINANTE")
-	meta := styleHeaderMeta.Render(m.now.Format("15:04") + " · " + m.statusSummary())
+
+	// The clock stays muted; the health note turns amber when anything needs
+	// attention, so a blocked or offline agent reads as an alert, not chrome.
+	summary := m.statusSummary()
+	summaryStyle := styleHeaderMeta
+	if summary != "all systems nominal" {
+		summaryStyle = styleWarn
+	}
+	meta := styleHeaderMeta.Render(m.now.Format("15:04")+" · ") + summaryStyle.Render(summary)
 
 	pad := m.width - lipgloss.Width(title) - lipgloss.Width(meta)
 	if pad < 1 {
@@ -82,24 +90,40 @@ func (m model) renderHeader() string {
 	return title + strings.Repeat(" ", pad) + meta
 }
 
-// statusSummary is the one-line health note in the header.
+// statusSummary is the one-line health note in the header. It leads with the
+// loudest problem, a blocked agent, so trouble surfaces without hunting, then
+// folds in offline, stale, and file-read errors.
 func (m model) statusSummary() string {
-	var stale, offline int
+	var blocked, stale, offline int
 	for _, a := range m.snapshot.Agents {
-		switch m.liveness(a) {
-		case fleet.LiveStale:
-			stale++
-		case fleet.LiveOffline:
+		live := m.liveness(a)
+		switch {
+		case live == fleet.LiveOffline:
 			offline++
+		case a.State == fleet.StateBlocked:
+			blocked++
+		case live == fleet.LiveStale:
+			stale++
 		}
 	}
-	if n := len(m.snapshot.Errors); n > 0 {
-		return fmt.Sprintf("%d file error(s)", n)
+
+	var parts []string
+	if blocked > 0 {
+		parts = append(parts, fmt.Sprintf("%d blocked", blocked))
 	}
-	if stale == 0 && offline == 0 {
+	if offline > 0 {
+		parts = append(parts, fmt.Sprintf("%d offline", offline))
+	}
+	if stale > 0 {
+		parts = append(parts, fmt.Sprintf("%d stale", stale))
+	}
+	if n := len(m.snapshot.Errors); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d file error(s)", n))
+	}
+	if len(parts) == 0 {
 		return "all systems nominal"
 	}
-	return fmt.Sprintf("%d stale, %d offline", stale, offline)
+	return strings.Join(parts, ", ")
 }
 
 func (m model) renderFooter() string {
