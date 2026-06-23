@@ -1,0 +1,9 @@
+# Built binary
+/rocinante
+
+# goreleaser output
+/dist/
+
+# Editor and OS cruft
+.DS_Store
+*.swp
