@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/vscarpenter/rocinante/internal/adapters/ccusage"
@@ -48,6 +49,10 @@ type model struct {
 
 	focus  panel
 	cursor int
+
+	inspecting bool
+	inspected  fleet.Status
+	viewport   viewport.Model
 
 	width  int
 	height int
@@ -166,9 +171,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		if m.inspecting {
+			m.viewport.Width = m.inspectWidth()
+			m.viewport.Height = m.inspectHeight()
+		}
 		return m, nil
 
 	case tea.KeyMsg:
+		if m.inspecting {
+			return m.handleInspectKey(msg)
+		}
 		return m.handleKey(msg)
 
 	case fleetMsg:
@@ -241,8 +253,58 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor = clamp(m.cursor+1, 0, m.lastAgentIndex())
 		}
 		return m, nil
+	case "enter":
+		if m.focus == panelFleet && len(m.snapshot.Agents) > 0 {
+			m = m.openInspect()
+		}
+		return m, nil
 	}
 	return m, nil
+}
+
+// handleInspectKey drives the inspect overlay: esc or enter returns to the
+// cockpit, q quits, and everything else scrolls the viewport.
+func (m model) handleInspectKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	case "esc", "enter":
+		m.inspecting = false
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.viewport, cmd = m.viewport.Update(msg)
+	return m, cmd
+}
+
+// openInspect captures the selected agent and loads its full record into a
+// fresh viewport.
+func (m model) openInspect() model {
+	s := m.snapshot.Agents[m.cursor]
+	vp := viewport.New(m.inspectWidth(), m.inspectHeight())
+	vp.SetContent(buildInspect(s, m.liveness(s), m.now, m.inspectWidth()))
+	m.viewport = vp
+	m.inspected = s
+	m.inspecting = true
+	return m
+}
+
+// inspectWidth and inspectHeight size the viewport within the screen, leaving
+// room for the inspect header, footer, and panel border.
+func (m model) inspectWidth() int {
+	w := m.width - 4
+	if w < 1 {
+		w = 1
+	}
+	return w
+}
+
+func (m model) inspectHeight() int {
+	h := m.height - 4
+	if h < 1 {
+		h = 1
+	}
+	return h
 }
 
 // applySnapshot records a new fleet state, appends any meaningful log lines, and

@@ -24,6 +24,9 @@ func (m model) View() string {
 	if m.width < minWidth || m.height < minHeight {
 		return m.renderTooSmall()
 	}
+	if m.inspecting {
+		return m.inspectView()
+	}
 
 	header := m.renderHeader()
 	footer := m.renderFooter()
@@ -48,6 +51,18 @@ func (m model) View() string {
 	log := m.renderLog(m.width-2-2, logHeight-2)
 
 	return strings.Join([]string{header, top, log, footer}, "\n")
+}
+
+// inspectView renders the full-screen inspect overlay for the selected agent.
+func (m model) inspectView() string {
+	name := m.inspected.Name
+	if name == "" {
+		name = m.inspected.ID
+	}
+	title := styleHeader.Render("ROCINANTE") + styleHeaderMeta.Render("  ·  inspect: "+name)
+	body := stylePanelFocused.Width(m.inspectWidth()).Height(m.inspectHeight()).Render(m.viewport.View())
+	footer := styleFooter.Render("[↑↓] scroll   [esc] back   [q] quit")
+	return strings.Join([]string{title, body, footer}, "\n")
 }
 
 func (m model) renderTooSmall() string {
