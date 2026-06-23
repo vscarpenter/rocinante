@@ -90,6 +90,13 @@ be installed and authenticated. A repo that gh cannot resolve shows an error
 line in Comms, and the rest of the cockpit keeps running. Set your own repos in
 the `[comms]` section.
 
+## Claude Code sessions
+
+Your live Claude Code sessions can appear on the bridge automatically through
+hooks. Claude Code runs `rocinante hook` on each lifecycle event and passes the
+event on stdin, so a session shows up as a `claude-code` agent with its current
+task. See [hooks/README.md](hooks/README.md) for the setup.
+
 ## Roadmap
 
 - v0.3 adds a remote Roci adapter over Tailscale.

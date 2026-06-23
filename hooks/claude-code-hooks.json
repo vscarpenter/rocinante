@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "rocinante hook" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "rocinante hook" }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "rocinante hook" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "rocinante hook" }] }
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "rocinante hook" }] }
+    ]
+  }
+}

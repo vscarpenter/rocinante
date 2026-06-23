@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/vscarpenter/rocinante/internal/config"
+	"github.com/vscarpenter/rocinante/internal/hook"
 	"github.com/vscarpenter/rocinante/internal/report"
 	"github.com/vscarpenter/rocinante/internal/ui"
 )
@@ -42,7 +43,31 @@ func newRootCmd() *cobra.Command {
 		},
 	}
 	root.AddCommand(newReportCmd())
+	root.AddCommand(newHookCmd())
 	return root
+}
+
+// newHookCmd wires the hook subcommand. Claude Code runs it for a lifecycle
+// event and passes the event JSON on stdin. It never fails loudly: any error is
+// logged to stderr but the command exits zero, so a status hook can never
+// disrupt the session it is observing.
+func newHookCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:    "hook",
+		Short:  "Translate a Claude Code hook event on stdin into a status report",
+		Hidden: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "rocinante hook:", err)
+				return nil
+			}
+			if err := hook.Run(cfg.Fleet.Dir, cmd.InOrStdin()); err != nil {
+				fmt.Fprintln(os.Stderr, "rocinante hook:", err)
+			}
+			return nil
+		},
+	}
 }
 
 // newReportCmd wires the report subcommand and its flags. It binds each flag
