@@ -61,7 +61,8 @@ to stale, then offline, on the configured thresholds.
 | `tab`     | Cycle focus across panels       |
 | `↑` `↓`   | Move the selection or scroll    |
 | `enter`   | Inspect the selected agent      |
-| `esc`     | Leave the inspect view          |
+| `l`       | Expand the Ship's Log full screen |
+| `esc`     | Leave the inspect or log view   |
 | `r`       | Refresh the Reactor and Comms   |
 | `q`       | Quit                            |
 

@@ -54,6 +54,8 @@ type model struct {
 	inspected  fleet.Status
 	viewport   viewport.Model
 
+	expandedLog bool
+
 	width  int
 	height int
 	now    time.Time
@@ -171,17 +173,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		if m.inspecting {
+		if m.inspecting || m.expandedLog {
 			m.viewport.Width = m.inspectWidth()
 			m.viewport.Height = m.inspectHeight()
 		}
 		return m, nil
 
 	case tea.KeyMsg:
-		if m.inspecting {
+		switch {
+		case m.inspecting:
 			return m.handleInspectKey(msg)
+		case m.expandedLog:
+			return m.handleLogKey(msg)
+		default:
+			return m.handleKey(msg)
 		}
-		return m.handleKey(msg)
 
 	case fleetMsg:
 		m = m.applySnapshot(fleet.Snapshot(msg))
@@ -258,6 +264,8 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m = m.openInspect()
 		}
 		return m, nil
+	case "l":
+		return m.openLogExpand(), nil
 	}
 	return m, nil
 }
@@ -277,6 +285,21 @@ func (m model) handleInspectKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// handleLogKey drives the full-screen Ship's Log: esc, enter, or l returns to
+// the cockpit, q quits, and everything else scrolls the viewport.
+func (m model) handleLogKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	case "esc", "enter", "l":
+		m.expandedLog = false
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.viewport, cmd = m.viewport.Update(msg)
+	return m, cmd
+}
+
 // openInspect captures the selected agent and loads its full record into a
 // fresh viewport.
 func (m model) openInspect() model {
@@ -286,6 +309,17 @@ func (m model) openInspect() model {
 	m.viewport = vp
 	m.inspected = s
 	m.inspecting = true
+	return m
+}
+
+// openLogExpand fills a fresh viewport with the full Ship's Log and switches to
+// the full-screen log overlay. It reuses the inspect viewport, since the two
+// overlays never show at once.
+func (m model) openLogExpand() model {
+	vp := viewport.New(m.inspectWidth(), m.inspectHeight())
+	vp.SetContent(m.buildLogExpand(m.inspectWidth()))
+	m.viewport = vp
+	m.expandedLog = true
 	return m
 }
 

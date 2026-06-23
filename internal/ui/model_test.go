@@ -162,6 +162,35 @@ func TestStatusSummaryCombinesProblems(t *testing.T) {
 	}
 }
 
+func TestUpdateLExpandsLog(t *testing.T) {
+	m := sizedModel(t0, freshAgent("gh-watch", "GitHub Watcher", t0))
+	next, _ := m.Update(key("l"))
+	if !next.(model).expandedLog {
+		t.Fatal("l should expand the Ship's Log to full screen")
+	}
+}
+
+func TestExpandedLogViewShowsHistoryAndBackHint(t *testing.T) {
+	m := sizedModel(t0, freshAgent("gh-watch", "GitHub Watcher", t0))
+	next, _ := m.Update(key("l"))
+	view := next.(model).View()
+
+	for _, want := range []string{"SHIP'S LOG", "gh-watch", "[esc] back"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("expanded log view missing %q, got:\n%s", want, view)
+		}
+	}
+}
+
+func TestUpdateEscClosesExpandedLog(t *testing.T) {
+	m := sizedModel(t0, freshAgent("a", "A", t0))
+	next, _ := m.Update(key("l"))
+	next, _ = next.(model).Update(key("esc"))
+	if next.(model).expandedLog {
+		t.Error("esc should close the expanded log")
+	}
+}
+
 func TestApplySnapshotSeedsAndUpdatesLog(t *testing.T) {
 	m := sizedModel(t0, freshAgent("a", "A", t0))
 	if len(m.logs) != 1 {

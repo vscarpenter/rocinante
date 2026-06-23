@@ -27,6 +27,9 @@ func (m model) View() string {
 	if m.inspecting {
 		return m.inspectView()
 	}
+	if m.expandedLog {
+		return m.logExpandView()
+	}
 
 	header := m.renderHeader()
 	footer := m.renderFooter()
@@ -63,6 +66,25 @@ func (m model) inspectView() string {
 	body := stylePanelFocused.Width(m.inspectWidth()).Height(m.inspectHeight()).Render(m.viewport.View())
 	footer := styleFooter.Render("[↑↓] scroll   [esc] back   [q] quit")
 	return strings.Join([]string{title, body, footer}, "\n")
+}
+
+// logExpandView renders the Ship's Log full screen so a long history is
+// scrollable, mirroring the inspect overlay.
+func (m model) logExpandView() string {
+	title := styleHeader.Render("ROCINANTE") + styleHeaderMeta.Render("  ·  SHIP'S LOG")
+	body := stylePanelFocused.Width(m.inspectWidth()).Height(m.inspectHeight()).Render(m.viewport.View())
+	footer := styleFooter.Render("[↑↓] scroll   [esc] back   [q] quit")
+	return strings.Join([]string{title, body, footer}, "\n")
+}
+
+// buildLogExpand renders the full Ship's Log for the overlay, newest first to
+// match the panel, with file-read errors on top.
+func (m model) buildLogExpand(width int) string {
+	lines := m.logLines(width, maxLogLines)
+	if len(lines) == 0 {
+		return styleMuted.Render("quiet so far")
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m model) renderTooSmall() string {
@@ -127,7 +149,7 @@ func (m model) statusSummary() string {
 }
 
 func (m model) renderFooter() string {
-	return styleFooter.Render("[tab] panels   [↑↓] select   [enter] inspect   [r] refresh   [q] quit")
+	return styleFooter.Render("[tab] panels   [enter] inspect   [l] logs   [r] refresh   [q] quit")
 }
 
 // panelStyle picks the focused or unfocused border for a panel.
