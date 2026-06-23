@@ -55,6 +55,7 @@ type model struct {
 	viewport   viewport.Model
 
 	expandedLog bool
+	showHelp    bool
 
 	width  int
 	height int
@@ -185,6 +186,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleInspectKey(msg)
 		case m.expandedLog:
 			return m.handleLogKey(msg)
+		case m.showHelp:
+			return m.handleHelpKey(msg)
 		default:
 			return m.handleKey(msg)
 		}
@@ -266,6 +269,9 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "l":
 		return m.openLogExpand(), nil
+	case "?":
+		m.showHelp = true
+		return m, nil
 	}
 	return m, nil
 }
@@ -298,6 +304,17 @@ func (m model) handleLogKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.viewport, cmd = m.viewport.Update(msg)
 	return m, cmd
+}
+
+// handleHelpKey dismisses the help overlay on any key except q, which quits.
+func (m model) handleHelpKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	default:
+		m.showHelp = false
+		return m, nil
+	}
 }
 
 // openInspect captures the selected agent and loads its full record into a

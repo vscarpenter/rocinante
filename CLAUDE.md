@@ -62,6 +62,9 @@ Also done: the v1.0 plumbing, CI, a goreleaser config, and `llms.txt`. Remaining
 v1.0 work is the light and dark themes against the real Signal Ledger ramp, and
 the Homebrew tap, which needs the tap repo and a token before it is enabled.
 
+Also done: the full spec keybindings, with `l` expanding the Ship's Log to a
+scrollable full screen and `?` toggling a help overlay.
+
 Also done: the v0.3 blocked-agent alert in the header, which turns the health
 note amber and leads with any blocked agent.
 

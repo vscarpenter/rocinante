@@ -30,6 +30,9 @@ func (m model) View() string {
 	if m.expandedLog {
 		return m.logExpandView()
 	}
+	if m.showHelp {
+		return m.helpView()
+	}
 
 	header := m.renderHeader()
 	footer := m.renderFooter()
@@ -85,6 +88,31 @@ func (m model) buildLogExpand(width int) string {
 		return styleMuted.Render("quiet so far")
 	}
 	return strings.Join(lines, "\n")
+}
+
+// helpView renders a centered overlay listing every keybinding, so the cockpit
+// is discoverable without the README.
+func (m model) helpView() string {
+	bindings := []struct{ key, desc string }{
+		{"tab / shift+tab", "cycle panels"},
+		{"↑ ↓ / k j", "move the selection"},
+		{"enter", "inspect the selected agent"},
+		{"l", "expand the Ship's Log"},
+		{"r", "refresh the Reactor and Comms"},
+		{"?", "toggle this help"},
+		{"q", "quit"},
+	}
+
+	var b strings.Builder
+	b.WriteString(stylePanelTitle.Render("KEYBINDINGS") + "\n\n")
+	keyCol := lipgloss.NewStyle().Width(18).Foreground(colorBlue)
+	for _, kb := range bindings {
+		b.WriteString(keyCol.Render(kb.key) + styleMuted.Render(kb.desc) + "\n")
+	}
+	b.WriteString("\n" + styleMuted.Render("any key to dismiss"))
+
+	box := stylePanelFocused.Render(b.String())
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, box)
 }
 
 func (m model) renderTooSmall() string {
@@ -149,7 +177,7 @@ func (m model) statusSummary() string {
 }
 
 func (m model) renderFooter() string {
-	return styleFooter.Render("[tab] panels   [enter] inspect   [l] logs   [r] refresh   [q] quit")
+	return styleFooter.Render("[tab] panels   [enter] inspect   [l] logs   [?] help   [r] refresh   [q] quit")
 }
 
 // panelStyle picks the focused or unfocused border for a panel.

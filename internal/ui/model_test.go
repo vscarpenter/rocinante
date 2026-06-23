@@ -191,6 +191,35 @@ func TestUpdateEscClosesExpandedLog(t *testing.T) {
 	}
 }
 
+func TestUpdateQuestionOpensHelp(t *testing.T) {
+	m := sizedModel(t0, freshAgent("a", "A", t0))
+	next, _ := m.Update(key("?"))
+	if !next.(model).showHelp {
+		t.Fatal("? should open the help overlay")
+	}
+}
+
+func TestHelpViewListsKeybindings(t *testing.T) {
+	m := sizedModel(t0, freshAgent("a", "A", t0))
+	next, _ := m.Update(key("?"))
+	view := next.(model).View()
+
+	for _, want := range []string{"inspect", "Ship's Log", "refresh", "quit"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("help overlay missing %q, got:\n%s", want, view)
+		}
+	}
+}
+
+func TestUpdateEscClosesHelp(t *testing.T) {
+	m := sizedModel(t0, freshAgent("a", "A", t0))
+	next, _ := m.Update(key("?"))
+	next, _ = next.(model).Update(key("esc"))
+	if next.(model).showHelp {
+		t.Error("esc should close the help overlay")
+	}
+}
+
 func TestApplySnapshotSeedsAndUpdatesLog(t *testing.T) {
 	m := sizedModel(t0, freshAgent("a", "A", t0))
 	if len(m.logs) != 1 {
