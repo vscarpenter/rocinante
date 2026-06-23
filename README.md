@@ -7,9 +7,11 @@ glance, what every agent is doing, how much it is burning, and what changed
 while you were in meetings. The product is a viewer. It reads state that agents
 already report; it does not orchestrate them.
 
-> Status: v0.1 in progress. This repository is being built in phases. The local
-> spine works today: the Fleet Status Contract, the `report` subcommand, a
-> file-watching fleet store, and a Fleet and Ship's Log TUI.
+> Status: v0.2 in progress. This repository is being built in phases. Working
+> today: the Fleet Status Contract, the `report` subcommand, a file-watching
+> fleet store, and a four-panel TUI. The Fleet and Ship's Log panels show local
+> agents, the Reactor panel shows today's token burn from `ccusage`, the Comms
+> panel shows open pull requests and CI from `gh`, and `enter` inspects an agent.
 
 ## One binary, two modes
 
@@ -39,15 +41,57 @@ go build -o rocinante ./cmd/rocinante
 The agent appears live. Report again to update it. Stop reporting, and it flips
 to stale, then offline, on the configured thresholds.
 
+## Keys
+
+| Key       | Action                          |
+| --------- | ------------------------------- |
+| `tab`     | Cycle focus across panels       |
+| `↑` `↓`   | Move the selection or scroll    |
+| `enter`   | Inspect the selected agent      |
+| `esc`     | Leave the inspect view          |
+| `r`       | Refresh the Reactor and Comms   |
+| `q`       | Quit                            |
+
 ## The Fleet Status Contract
 
 Every crew member speaks one versioned, language-agnostic contract. One file per
 agent lives at `~/.rocinante/fleet/<id>.json`. See the build spec for the full
 schema and field reference.
 
+## Configuration
+
+The app runs with no config at all. To override defaults, write
+`~/.rocinante/config.toml`. The file only overrides; omitted keys keep their
+defaults.
+
+```toml
+[fleet]
+dir           = "~/.rocinante/fleet"
+stale_after   = "90s"
+offline_after = "300s"
+
+[reactor]
+enabled  = true
+command  = "ccusage"
+args     = ["daily", "--json"]
+interval = "60s"
+
+[comms]
+enabled  = true
+repos    = ["vscarpenter/rocinante", "vscarpenter/inkwell"]
+interval = "90s"
+
+[theme]
+mode = "adaptive"
+```
+
+The Reactor shells out to `ccusage`, and Comms shells out to `gh`, so both must
+be installed and authenticated. A repo that gh cannot resolve shows an error
+line in Comms, and the rest of the cockpit keeps running. Set your own repos in
+the `[comms]` section.
+
 ## Roadmap
 
-- v0.2 adds the Reactor through `ccusage` and Comms through `gh`.
 - v0.3 adds a remote Roci adapter over Tailscale.
 - v1.0 adds goreleaser, a Homebrew tap, and finished themes.
 
