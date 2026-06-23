@@ -1,0 +1,69 @@
+version: 2
+
+project_name: rocinante
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: rocinante
+    main: ./cmd/rocinante
+    binary: rocinante
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .Commit }}
+      - -X main.date={{ .Date }}
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    # The spec targets darwin arm64, darwin amd64, and linux amd64.
+    ignore:
+      - goos: linux
+        goarch: arm64
+
+archives:
+  - id: rocinante
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: vscarpenter
+    name: rocinante
+
+# Homebrew tap. To enable, first create the vscarpenter/homebrew-tap repository,
+# then add a HOMEBREW_TAP_GITHUB_TOKEN secret with repo scope on that tap, and
+# uncomment this block. Until then, releases still publish archives and
+# checksums, so brew is a deliberate opt-in rather than a release blocker.
+#
+# brews:
+#   - name: rocinante
+#     repository:
+#       owner: vscarpenter
+#       name: homebrew-tap
+#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+#     homepage: "https://github.com/vscarpenter/rocinante"
+#     description: "A terminal cockpit for your agent fleet"
+#     license: "MIT"
+#     test: |
+#       system "#{bin}/rocinante", "--version"

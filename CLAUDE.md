@@ -58,9 +58,12 @@ an fsnotify-backed fleet store with staleness, and a Fleet and Ship's Log TUI.
 Also done: v0.2, config loading, the Reactor through `ccusage`, Comms through
 `gh`, and the inspect view. Also done: Claude Code hooks through `rocinante hook`.
 
-Deferred to later sessions, with clean seams left in place: the remote Roci
-adapter over Tailscale (v0.3). The distribution plumbing, goreleaser, a Homebrew
-tap, and CI, lands in v1.0.
+Also done: the v1.0 plumbing, CI, a goreleaser config, and `llms.txt`. Remaining
+v1.0 work is the light and dark themes against the real Signal Ledger ramp, and
+the Homebrew tap, which needs the tap repo and a token before it is enabled.
+
+Deferred to a later session, with a clean seam left in place: the remote Roci
+adapter over Tailscale (v0.3).
 
 ## Verified invocations
 

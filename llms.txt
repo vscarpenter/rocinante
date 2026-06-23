@@ -1,0 +1,58 @@
+# Rocinante
+
+> A terminal cockpit for your agent fleet. Rocinante is a viewer. It reads status
+> that agents already report and shows it in a keyboard-driven terminal UI. It
+> never starts, stops, or commands agents.
+
+Any agent joins the cockpit by reporting through one command. Nothing hand-writes
+JSON, and nothing needs to know the file format, directory, or schema version.
+
+## Report your status
+
+Call the binary at the start and end of work:
+
+```
+rocinante report --id <id> --name <label> --kind <kind> --state <state> \
+  --task "<one line>" --detail "<longer text>" --tokens <int>
+```
+
+- `--id` is required, stable, and unique. It becomes the filename.
+- On a new agent, `--name`, `--kind`, and `--state` are required.
+- A later call merges: it overwrites only the flags you pass, stamps the
+  heartbeat, and resets the start time only when the state changes.
+- `--kind` is one of: always-on, cron, launchd, claude-code, other.
+- `--state` is one of: running, idle, blocked, error, offline.
+
+## The Fleet Status Contract
+
+One JSON file per agent lives at `~/.rocinante/fleet/<id>.json`. The bridge
+watches that directory and updates instantly. The schema, version 1:
+
+| Field          | Type    | Required | Notes                                          |
+| -------------- | ------- | -------- | ---------------------------------------------- |
+| `schema`       | int     | yes      | Contract version. The bridge refuses a newer major. |
+| `id`           | string  | yes      | Stable, unique. The filename.                  |
+| `name`         | string  | yes      | Human label.                                   |
+| `kind`         | enum    | yes      | always-on, cron, launchd, claude-code, other.  |
+| `state`        | enum    | yes      | running, idle, blocked, error, offline.        |
+| `task`         | string  | no       | One line of current work.                      |
+| `detail`       | string  | no       | Longer text, shown in the inspect view.        |
+| `since`        | RFC3339 | yes      | When the current state began.                  |
+| `heartbeat`    | RFC3339 | yes      | Last update. Drives staleness.                 |
+| `tokens_today` | int     | no       | For agents that consume tokens.                |
+| `meta`         | object  | no       | Freeform, such as pid or working directory.    |
+
+Writes are atomic, a temp file plus a rename, so the bridge never reads a
+half-written file.
+
+## Derived state
+
+The bridge infers silence. If now minus `heartbeat` exceeds the stale threshold,
+the agent dims to stale. If it exceeds the offline threshold, the agent reads
+offline. Defaults are 90 seconds and 300 seconds, set in `~/.rocinante/config.toml`.
+
+## Claude Code sessions
+
+Claude Code runs `rocinante hook` on each lifecycle event and passes the event as
+JSON on stdin. The binary maps it to a report, so a live session appears with no
+polling. See hooks/README.md.

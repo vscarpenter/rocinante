@@ -18,6 +18,13 @@ import (
 	"github.com/vscarpenter/rocinante/internal/ui"
 )
 
+// Build metadata, injected by goreleaser through ldflags at release time.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "rocinante:", err)
@@ -32,6 +39,7 @@ func newRootCmd() *cobra.Command {
 		Use:           "rocinante",
 		Short:         "A terminal cockpit for your agent fleet",
 		Long:          "Rocinante is the bridge you watch your whole agent fleet from. It reads status that agents already report; it does not orchestrate them.",
+		Version:       fmt.Sprintf("%s (commit %s, built %s)", version, commit, date),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -25,6 +25,17 @@ Claude Code hook, or a remote agent calls `rocinante report` to announce what it
 is doing. None of them need to know the file format, the directory, or the
 schema version. The binary owns all of that.
 
+## Install
+
+Once a release is published, install with Go:
+
+```bash
+go install github.com/vscarpenter/rocinante/cmd/rocinante@latest
+```
+
+A Homebrew tap is planned, so `brew install vscarpenter/tap/rocinante` will work
+after the first tagged release. Until then, build from source as below.
+
 ## Quickstart
 
 ```bash
@@ -97,10 +108,27 @@ hooks. Claude Code runs `rocinante hook` on each lifecycle event and passes the
 event on stdin, so a session shows up as a `claude-code` agent with its current
 task. See [hooks/README.md](hooks/README.md) for the setup.
 
+## Releasing
+
+CI runs `golangci-lint`, `go test`, and a build on every push and pull request.
+To cut a release, tag a commit and push the tag:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+The release workflow runs goreleaser, which builds darwin arm64, darwin amd64,
+and linux amd64, then publishes archives and checksums on the GitHub release. To
+add the Homebrew tap, create `vscarpenter/homebrew-tap`, store a
+`HOMEBREW_TAP_GITHUB_TOKEN` secret, and uncomment the `brews` block in
+`.goreleaser.yaml`.
+
 ## Roadmap
 
 - v0.3 adds a remote Roci adapter over Tailscale.
-- v1.0 adds goreleaser, a Homebrew tap, and finished themes.
+- v1.0 finalizes the light and dark themes against the real Signal Ledger ramp.
+  The CI, goreleaser, and `llms.txt` plumbing is in place.
 
 ## License
 
