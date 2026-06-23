@@ -1,16 +1,25 @@
 package ui
 
 import (
+	"context"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/vscarpenter/rocinante/internal/adapters/ccusage"
+	"github.com/vscarpenter/rocinante/internal/adapters/github"
 	"github.com/vscarpenter/rocinante/internal/config"
 	"github.com/vscarpenter/rocinante/internal/fleet"
 )
 
 // maxLogLines caps the Ship's Log history kept in memory.
 const maxLogLines = 200
+
+// Per-fetch timeouts bound a hung adapter so it never stalls the bridge.
+const (
+	reactorTimeout = 12 * time.Second
+	commsTimeout   = 20 * time.Second
+)
 
 // panel identifies a focusable region. Tab cycles through them.
 type panel int
@@ -31,6 +40,11 @@ type model struct {
 	snapshot fleet.Snapshot
 	byID     map[string]fleet.Status
 	logs     []logEntry
+
+	reactor    *ccusage.Reactor
+	reactorErr string
+	comms      *github.Comms
+	commsErr   string
 
 	focus  panel
 	cursor int
@@ -57,13 +71,68 @@ func newModel(cfg config.Config, store *fleet.Store) model {
 
 // Messages flowing through Update.
 type (
-	fleetMsg fleet.Snapshot
-	tickMsg  time.Time
+	fleetMsg       fleet.Snapshot
+	tickMsg        time.Time
+	reactorMsg     ccusage.Reactor
+	commsMsg       github.Comms
+	reactorTickMsg struct{}
+	commsTickMsg   struct{}
+	errMsg         struct{ source, text string }
 )
 
-// Init kicks off the fleet listener and the staleness tick.
+// Init kicks off the fleet listener, the staleness tick, and the first poll of
+// each enabled adapter.
 func (m model) Init() tea.Cmd {
-	return tea.Batch(listenFleet(m.store), tickEvery())
+	cmds := []tea.Cmd{listenFleet(m.store), tickEvery()}
+	if c := fetchReactor(m.cfg.Reactor); c != nil {
+		cmds = append(cmds, c)
+	}
+	if c := fetchComms(m.cfg.Comms); c != nil {
+		cmds = append(cmds, c)
+	}
+	return tea.Batch(cmds...)
+}
+
+// fetchReactor polls ccusage once under a timeout. It returns nil when the
+// Reactor is disabled, so Init and refresh can skip it.
+func fetchReactor(cfg config.ReactorConfig) tea.Cmd {
+	if !cfg.Enabled {
+		return nil
+	}
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), reactorTimeout)
+		defer cancel()
+		r, err := ccusage.Fetch(ctx, cfg.Command, cfg.Args)
+		if err != nil {
+			return errMsg{source: "reactor", text: err.Error()}
+		}
+		return reactorMsg(r)
+	}
+}
+
+// fetchComms polls gh once under a timeout. It returns nil when Comms is
+// disabled or no repos are configured.
+func fetchComms(cfg config.CommsConfig) tea.Cmd {
+	if !cfg.Enabled || len(cfg.Repos) == 0 {
+		return nil
+	}
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), commsTimeout)
+		defer cancel()
+		c, err := github.Fetch(ctx, cfg.Repos)
+		if err != nil {
+			return errMsg{source: "comms", text: err.Error()}
+		}
+		return commsMsg(c)
+	}
+}
+
+func reactorTick(d time.Duration) tea.Cmd {
+	return tea.Tick(d, func(time.Time) tea.Msg { return reactorTickMsg{} })
+}
+
+func commsTick(d time.Duration) tea.Cmd {
+	return tea.Tick(d, func(time.Time) tea.Msg { return commsTickMsg{} })
 }
 
 // listenFleet blocks on the store's Updates channel and emits one fleetMsg.
@@ -109,6 +178,41 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		m.now = time.Time(msg)
 		return m, tickEvery()
+
+	case reactorMsg:
+		r := ccusage.Reactor(msg)
+		m.reactor = &r
+		m.reactorErr = ""
+		return m, reactorTick(m.cfg.Reactor.Interval)
+
+	case commsMsg:
+		c := github.Comms(msg)
+		m.comms = &c
+		m.commsErr = ""
+		return m, commsTick(m.cfg.Comms.Interval)
+
+	case errMsg:
+		return m.handleErr(msg)
+
+	case reactorTickMsg:
+		return m, fetchReactor(m.cfg.Reactor)
+
+	case commsTickMsg:
+		return m, fetchComms(m.cfg.Comms)
+	}
+	return m, nil
+}
+
+// handleErr records an adapter error and schedules its next attempt, so a
+// failing source shows a line and keeps retrying rather than going dark.
+func (m model) handleErr(msg errMsg) (tea.Model, tea.Cmd) {
+	switch msg.source {
+	case "reactor":
+		m.reactorErr = msg.text
+		return m, reactorTick(m.cfg.Reactor.Interval)
+	case "comms":
+		m.commsErr = msg.text
+		return m, commsTick(m.cfg.Comms.Interval)
 	}
 	return m, nil
 }
@@ -119,6 +223,8 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
+	case "r":
+		return m, tea.Batch(fetchReactor(m.cfg.Reactor), fetchComms(m.cfg.Comms))
 	case "tab":
 		m.focus = (m.focus + 1) % panelCount
 		return m, nil

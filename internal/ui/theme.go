@@ -21,6 +21,7 @@ var (
 	colorDim   = lipgloss.AdaptiveColor{Light: "#9ca3af", Dark: "#4b5563"}
 	colorAmber = lipgloss.AdaptiveColor{Light: "#b45309", Dark: "#f59e0b"}
 	colorRed   = lipgloss.AdaptiveColor{Light: "#b91c1c", Dark: "#ef4444"}
+	colorGreen = lipgloss.AdaptiveColor{Light: "#15803d", Dark: "#22c55e"}
 	colorBlue  = lipgloss.AdaptiveColor{Light: "#2167f3", Dark: "#5b8cff"}
 )
 
@@ -50,6 +51,10 @@ var (
 	styleMuted = lipgloss.NewStyle().Foreground(colorMuted)
 
 	styleError = lipgloss.NewStyle().Foreground(colorRed)
+
+	styleGood = lipgloss.NewStyle().Foreground(colorGreen)
+
+	styleWarn = lipgloss.NewStyle().Foreground(colorAmber)
 
 	stylePlaceholder = lipgloss.NewStyle().Foreground(colorDim).Italic(true)
 )

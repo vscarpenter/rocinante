@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/vscarpenter/rocinante/internal/adapters/github"
 	"github.com/vscarpenter/rocinante/internal/fleet"
 )
 
@@ -87,7 +88,7 @@ func (m model) statusSummary() string {
 }
 
 func (m model) renderFooter() string {
-	return styleFooter.Render("[tab] panels   [↑↓] select   [q] quit")
+	return styleFooter.Render("[tab] panels   [↑↓] select   [enter] inspect   [r] refresh   [q] quit")
 }
 
 // panelStyle picks the focused or unfocused border for a panel.
@@ -157,8 +158,7 @@ func (m model) renderAgentLine(a fleet.Status, selected bool, width int) string 
 	return out
 }
 
-// renderRightColumn stacks the Reactor and Comms placeholders. Their adapters
-// are deferred, so they show a clear pending note rather than fabricated data.
+// renderRightColumn stacks the live Reactor and Comms panels.
 func (m model) renderRightColumn(innerW, innerH int) string {
 	half := innerH / 2
 	topH := half - 2          // first panel's border
@@ -170,16 +170,85 @@ func (m model) renderRightColumn(innerW, innerH int) string {
 		botH = 1
 	}
 
-	reactor := stylePanelTitle.Render("REACTOR") + "\n" +
-		stylePlaceholder.Render("token burn") + "\n" +
-		styleMuted.Render("awaiting ccusage adapter")
-	comms := stylePanelTitle.Render("COMMS") + "\n" +
-		stylePlaceholder.Render("GitHub") + "\n" +
-		styleMuted.Render("awaiting gh adapter")
+	contentW := innerW - 2
+	reactor := strings.Join(capLines(m.reactorLines(contentW), topH), "\n")
+	comms := strings.Join(capLines(m.commsLines(contentW), botH), "\n")
 
 	top := stylePanel.Width(innerW).Height(topH).Render(reactor)
 	bottom := stylePanel.Width(innerW).Height(botH).Render(comms)
 	return lipgloss.JoinVertical(lipgloss.Left, top, bottom)
+}
+
+// reactorLines renders the Reactor panel body, today's token burn from ccusage.
+func (m model) reactorLines(w int) []string {
+	title := stylePanelTitle.Render("REACTOR") + "  " + styleMuted.Render("tokens, today")
+	switch {
+	case !m.cfg.Reactor.Enabled:
+		return []string{title, stylePlaceholder.Render("disabled")}
+	case m.reactorErr != "":
+		return []string{title, styleError.Render(truncate("! "+m.reactorErr, w))}
+	case m.reactor == nil:
+		return []string{title, styleMuted.Render("loading...")}
+	}
+
+	r := m.reactor
+	headline := fmt.Sprintf("%s tok   cache-read %.0f%%", formatTokens(r.TotalTokens), r.CacheReadRatio()*100)
+	trend := sparkline(r.Spark)
+	if trend != "" {
+		trend += "   "
+	}
+	cost := fmt.Sprintf("%s$%.2f today", trend, r.CostUSD)
+	return []string{title, truncate(headline, w), styleMuted.Render(truncate(cost, w))}
+}
+
+// commsLines renders the Comms panel body, open PRs and CI from gh.
+func (m model) commsLines(w int) []string {
+	title := stylePanelTitle.Render("COMMS") + "  " + styleMuted.Render("GitHub")
+	switch {
+	case !m.cfg.Comms.Enabled:
+		return []string{title, stylePlaceholder.Render("disabled")}
+	case m.commsErr != "":
+		return []string{title, styleError.Render(truncate("! "+m.commsErr, w))}
+	case m.comms == nil:
+		return []string{title, styleMuted.Render("loading...")}
+	}
+
+	c := m.comms
+	lines := []string{
+		title,
+		truncate(fmt.Sprintf("%d open PRs   %d need review", c.OpenPRs, c.NeedReview), w),
+		m.ciSummary(c),
+	}
+	if n := len(c.Errors); n > 0 {
+		lines = append(lines, styleError.Render(truncate(fmt.Sprintf("! %d repo error(s)", n), w)))
+	}
+	return lines
+}
+
+// ciSummary renders the rolled-up CI state, colored by severity.
+func (m model) ciSummary(c *github.Comms) string {
+	switch {
+	case c.CIFailing > 0:
+		return styleError.Render(fmt.Sprintf("CI %d failing", c.CIFailing))
+	case c.CIPending > 0:
+		return styleWarn.Render(fmt.Sprintf("CI %d pending", c.CIPending))
+	case c.CIGreen > 0:
+		return styleGood.Render("CI green")
+	default:
+		return styleMuted.Render("CI idle")
+	}
+}
+
+// capLines trims a slice to at most n lines, so panel content never overflows
+// its box height.
+func capLines(lines []string, n int) []string {
+	if n < 1 {
+		n = 1
+	}
+	if len(lines) > n {
+		return lines[:n]
+	}
+	return lines
 }
 
 func (m model) renderLog(innerW, innerH int) string {
