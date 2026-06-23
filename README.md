@@ -1,5 +1,7 @@
 # Rocinante
 
+[![CI](https://github.com/vscarpenter/rocinante/actions/workflows/ci.yml/badge.svg)](https://github.com/vscarpenter/rocinante/actions/workflows/ci.yml)
+
 A terminal cockpit for your agent fleet.
 
 Rocinante is the bridge you watch your whole agent fleet from. It shows, at a

@@ -4,6 +4,13 @@
 # goreleaser output
 /dist/
 
+# Go test and coverage output
+*.test
+*.out
+coverage.*
+
 # Editor and OS cruft
 .DS_Store
 *.swp
+.idea/
+.vscode/

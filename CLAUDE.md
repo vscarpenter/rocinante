@@ -11,7 +11,7 @@ keeps the blast radius small, so hold it.
 
 ## Source of truth
 
-`rocinante-build-spec.md` is the source of truth. Read it before building. If a
+`docs/rocinante-build-spec.md` is the source of truth. Read it before building. If a
 prompt and the spec disagree, the spec wins. If the spec is silent or ambiguous,
 ask rather than guessing.
 
