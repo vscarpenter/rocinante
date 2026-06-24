@@ -115,28 +115,39 @@ type fileConfig struct {
 	} `toml:"theme"`
 }
 
-// loadFrom layers the file at path over the defaults. A missing file is not an
-// error; the defaults stand.
+// loadFrom layers the file at path over the defaults, then applies environment
+// overrides last. A missing file is not an error; the defaults stand and the
+// env overrides still apply.
 func loadFrom(path string) (Config, error) {
 	cfg := Default()
 
 	data, err := os.ReadFile(path)
-	if errors.Is(err, fs.ErrNotExist) {
-		return cfg, nil
-	}
-	if err != nil {
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		// No file is fine; the defaults stand.
+	case err != nil:
 		return cfg, fmt.Errorf("config: read %s: %w", path, err)
+	default:
+		var fc fileConfig
+		if err := toml.Unmarshal(data, &fc); err != nil {
+			return cfg, fmt.Errorf("config: parse %s: %w", path, err)
+		}
+		if err := applyFile(&cfg, fc); err != nil {
+			return cfg, fmt.Errorf("config: %s: %w", path, err)
+		}
 	}
 
-	var fc fileConfig
-	if err := toml.Unmarshal(data, &fc); err != nil {
-		return cfg, fmt.Errorf("config: parse %s: %w", path, err)
-	}
-
-	if err := applyFile(&cfg, fc); err != nil {
-		return cfg, fmt.Errorf("config: %s: %w", path, err)
-	}
+	applyEnv(&cfg)
 	return cfg, nil
+}
+
+// applyEnv overlays environment overrides last, so they win over the file and
+// the defaults. ROCINANTE_FLEET_DIR points both the bridge and report at an
+// alternate fleet directory, which sandboxes the demo and eases testing.
+func applyEnv(cfg *Config) {
+	if d := os.Getenv("ROCINANTE_FLEET_DIR"); d != "" {
+		cfg.Fleet.Dir = expandHome(d)
+	}
 }
 
 // applyFile overlays the file values that are present onto cfg.

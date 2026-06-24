@@ -79,6 +79,56 @@ repos = ["acme/widgets"]
 	}
 }
 
+func TestLoadFromEnvOverridesFleetDir(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("no home dir")
+	}
+
+	tests := []struct {
+		name string
+		env  string
+		file string
+		want string
+	}{
+		{
+			name: "unset keeps the file value",
+			env:  "",
+			file: "[fleet]\ndir = \"/from-file\"\n",
+			want: "/from-file",
+		},
+		{
+			name: "set overrides the file value",
+			env:  "/from-env",
+			file: "[fleet]\ndir = \"/from-file\"\n",
+			want: "/from-env",
+		},
+		{
+			name: "leading tilde expands",
+			env:  "~/env-fleet",
+			file: "",
+			want: filepath.Join(home, "env-fleet"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("ROCINANTE_FLEET_DIR", tc.env)
+			path := filepath.Join(t.TempDir(), "none.toml")
+			if tc.file != "" {
+				path = writeConfig(t, tc.file)
+			}
+			cfg, err := loadFrom(path)
+			if err != nil {
+				t.Fatalf("loadFrom: %v", err)
+			}
+			if cfg.Fleet.Dir != tc.want {
+				t.Errorf("fleet dir: got %q, want %q", cfg.Fleet.Dir, tc.want)
+			}
+		})
+	}
+}
+
 func TestLoadFromBadDurationErrors(t *testing.T) {
 	path := writeConfig(t, "[fleet]\nstale_after = \"banana\"\n")
 	if _, err := loadFrom(path); err == nil {
