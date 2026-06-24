@@ -68,6 +68,10 @@ scrollable full screen and `?` toggling a help overlay.
 Also done: the v0.3 blocked-agent alert in the header, which turns the health
 note amber and leads with any blocked agent.
 
+Also done: a `ROCINANTE_FLEET_DIR` env override and an `examples/demo-fleet.sh`
+living demo that drives a sandboxed fake fleet through `rocinante report`, plus
+a commented `examples/config.toml` reference.
+
 Deferred to a later session, with a clean seam left in place: the remote Roci
 adapter over Tailscale (v0.3).
 

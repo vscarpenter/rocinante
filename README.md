@@ -54,6 +54,27 @@ go build -o rocinante ./cmd/rocinante
 The agent appears live. Report again to update it. Stop reporting, and it flips
 to stale, then offline, on the configured thresholds.
 
+## Live demo
+
+To see a whole fleet at once, run the demo. It drives five fake agents through
+`rocinante report`, so the cockpit fills with changing state, a scrolling Ship's
+Log, the amber blocked alert, and an agent that decays to stale, then offline.
+
+```bash
+go build -o rocinante ./cmd/rocinante
+
+# Drive the fleet. It prints the exact command for the other pane.
+./examples/demo-fleet.sh --live
+
+# In another shell, point the bridge at the same sandbox.
+ROCINANTE_FLEET_DIR=${TMPDIR:-/tmp}/rocinante-demo ./rocinante
+```
+
+The demo writes to a sandbox through the `ROCINANTE_FLEET_DIR` override, so it
+never touches your real fleet. Stop with Ctrl-C, then clean up with
+`./examples/demo-fleet.sh --clean`. See [examples/README.md](examples/README.md)
+for the details.
+
 ## Keys
 
 | Key       | Action                          |
@@ -104,6 +125,11 @@ The Reactor shells out to `ccusage`, and Comms shells out to `gh`, so both must
 be installed and authenticated. A repo that gh cannot resolve shows an error
 line in Comms, and the rest of the cockpit keeps running. Set your own repos in
 the `[comms]` section.
+
+The `ROCINANTE_FLEET_DIR` environment variable overrides `[fleet] dir` for both
+the bridge and `report`. It wins over the config file, which is how the demo
+runs in a sandbox. A fully commented reference config lives at
+[examples/config.toml](examples/config.toml).
 
 ## Claude Code sessions
 

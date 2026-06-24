@@ -1,0 +1,31 @@
+# Rocinante reference config.
+#
+# Rocinante runs with no config at all. This file documents every setting and
+# its default. Copy what you want to ~/.rocinante/config.toml; omitted keys keep
+# their defaults. Durations are strings like "90s" or "5m".
+
+[fleet]
+# Where agents write their status files. The ROCINANTE_FLEET_DIR env var, if
+# set, overrides this for both the bridge and `rocinante report`.
+dir           = "~/.rocinante/fleet"
+# Silence past stale_after dims an agent. Past offline_after marks it offline.
+stale_after   = "90s"
+offline_after = "300s"
+
+[reactor]
+# The Reactor shells out to ccusage for today's token burn. Set enabled = false
+# to hide the panel, for example when running the demo without ccusage.
+enabled  = true
+command  = "ccusage"
+args     = ["daily", "--json"]
+interval = "60s"
+
+[comms]
+# Comms shells out to gh for open pull requests and CI. List the repos to watch.
+enabled  = true
+repos    = ["vscarpenter/rocinante", "vscarpenter/inkwell"]
+interval = "90s"
+
+[theme]
+# adaptive reads the terminal background. Force it with light or dark.
+mode = "adaptive"
